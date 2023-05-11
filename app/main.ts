@@ -1850,8 +1850,26 @@ app.on('ready', async () => {
     },
   });
 
-  // Run window preloading in parallel with database initialization.
-  await createWindow();
+  const showHelp = process.argv.some(arg => arg === '--help');
+  const importFromSignalBackupToolsCsvs = process.argv.some(
+    arg => arg === '--import-from-signalbackuptools-csvs'
+  );
+  const onlyCommandLine = showHelp || importFromSignalBackupToolsCsvs;
+
+  if (!onlyCommandLine) {
+    // Run window preloading in parallel with database initialization.
+    await createWindow();
+  } else {
+    if (showHelp) {
+      console.log(
+        'signal-desktop:\nSend messages securely, even with a compromised server\n\n\t--help                   Print this help and exit\n\t--import-from-signalbackuptools-csvs  Do nothing'
+      );
+      app.exit(0);
+    }
+    if (importFromSignalBackupToolsCsvs) {
+      console.log('Not starting import...');
+    }
+  }
 
   const { error: sqlError } = await sqlInitPromise;
   if (sqlError) {
@@ -1876,6 +1894,10 @@ app.on('ready', async () => {
       '(ready event handler) error deleting IndexedDB:',
       Errors.toLogFormat(err)
     );
+  }
+
+  if (onlyCommandLine) {
+    app.exit(0);
   }
 
   ready = true;
