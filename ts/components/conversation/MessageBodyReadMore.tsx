@@ -27,7 +27,6 @@ export type Props = Pick<
 };
 
 const INITIAL_LENGTH = 800;
-const INCREMENT_COUNT = 3000;
 const BUFFER = 100;
 
 export function doesMessageBodyOverflow(str: string): boolean {
@@ -60,7 +59,7 @@ export function MessageBodyReadMore({
 
   const onIncreaseTextLength = hasReadMore
     ? () => {
-        messageExpanded(id, maxLength + INCREMENT_COUNT);
+        messageExpanded(id, text.length);
       }
     : undefined;
 
