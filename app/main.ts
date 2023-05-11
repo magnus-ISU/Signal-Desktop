@@ -6,6 +6,7 @@ import { pathToFileURL } from 'url';
 import * as os from 'os';
 import { chmod, realpath, writeFile } from 'fs-extra';
 import { randomBytes } from 'crypto';
+import { readFileSync } from 'fs';
 
 import normalizePath from 'normalize-path';
 import fastGlob from 'fast-glob';
@@ -1860,14 +1861,18 @@ app.on('ready', async () => {
     // Run window preloading in parallel with database initialization.
     await createWindow();
   } else {
+    console.log('Running in command line only');
     if (showHelp) {
-      console.log(
-        'signal-desktop:\nSend messages securely, even with a compromised server\n\n\t--help                   Print this help and exit\n\t--import-from-signalbackuptools-csvs  Do nothing'
-      );
+      process.stdout.write(`
+
+signal-desktop:
+Send messages securely, even with a compromised server
+
+\t--help                                Print this help and exit
+\t--import-from-signalbackuptools-csvs  Do nothing
+
+`);
       app.exit(0);
-    }
-    if (importFromSignalBackupToolsCsvs) {
-      console.log('Not starting import...');
     }
   }
 
@@ -1897,6 +1902,14 @@ app.on('ready', async () => {
   }
 
   if (onlyCommandLine) {
+    if (importFromSignalBackupToolsCsvs) {
+      const messagesPath = 'messages.csv';
+      const recipientPath = 'messages.csv';
+      const messages: string = readFileSync(messagesPath, 'utf-8');
+      const recipients: string = readFileSync(recipientPath, 'utf-8');
+      console.log(messages);
+      console.log(recipients);
+    }
     app.exit(0);
   }
 
