@@ -1903,12 +1903,17 @@ Send messages securely, even with a compromised server
 
   if (onlyCommandLine) {
     if (importFromSignalBackupToolsCsvs) {
+      try {
       const messagesPath = 'messages.csv';
       const recipientPath = 'messages.csv';
       const messages: string = readFileSync(messagesPath, 'utf-8');
       const recipients: string = readFileSync(recipientPath, 'utf-8');
       console.log(messages);
       console.log(recipients);
+      } catch {
+        console.log('Failed to open files. Exiting...');
+        app.exit(1);
+      }
     }
     app.exit(0);
   }
