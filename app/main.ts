@@ -7,11 +7,12 @@ import * as os from 'os';
 import { chmod, realpath, writeFile } from 'fs-extra';
 import { randomBytes } from 'crypto';
 import { readFileSync } from 'fs';
+import Database from '@signalapp/better-sqlite3';
 
 import normalizePath from 'normalize-path';
 import fastGlob from 'fast-glob';
 import PQueue from 'p-queue';
-import { get, pick, isNumber, isBoolean, some, debounce, noop } from 'lodash';
+import { get, pick, isNumber, isBoolean, some, debounce, noop, forEach } from 'lodash';
 import {
   app,
   BrowserWindow,
@@ -1904,14 +1905,17 @@ Send messages securely, even with a compromised server
   if (onlyCommandLine) {
     if (importFromSignalBackupToolsCsvs) {
       try {
-      const messagesPath = 'messages.csv';
-      const recipientPath = 'messages.csv';
-      const messages: string = readFileSync(messagesPath, 'utf-8');
-      const recipients: string = readFileSync(recipientPath, 'utf-8');
-      console.log(messages);
-      console.log(recipients);
-      } catch {
-        console.log('Failed to open files. Exiting...');
+        const databasePath = 'Android_Database/database.sqlite';
+        const androidDB = new Database(databasePath);
+        const query = androidDB.prepare(`select body, quote_id, quote_body, from_recipient_id, to_recipient_id, date_received, date_sent, link_previews, * from message where date_sent=1683655189509`);
+        const rows = query.all();
+        rows.forEach(e => {
+          console.log(e);
+          process.stdout.write('\n');
+        });
+        androidDB.close();
+      } catch (e) {
+        console.log(`Failed to open files: (${e.message}). Exiting...`);
         app.exit(1);
       }
     }
