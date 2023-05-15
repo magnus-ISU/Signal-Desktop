@@ -6,13 +6,13 @@ import { pathToFileURL } from 'url';
 import * as os from 'os';
 import { chmod, realpath, writeFile } from 'fs-extra';
 import { randomBytes } from 'crypto';
-import { readFileSync } from 'fs';
 import Database from '@signalapp/better-sqlite3';
+import dataInterface from '../ts/sql/Server';
 
 import normalizePath from 'normalize-path';
 import fastGlob from 'fast-glob';
 import PQueue from 'p-queue';
-import { get, pick, isNumber, isBoolean, some, debounce, noop, forEach } from 'lodash';
+import { get, pick, isNumber, isBoolean, some, debounce, noop } from 'lodash';
 import {
   app,
   BrowserWindow,
@@ -122,6 +122,8 @@ import type { LocaleType } from './locale';
 import { load as loadLocale } from './locale';
 
 import type { LoggerType } from '../ts/types/Logging';
+import { sleep } from '../ts/util/sleep';
+import { MessageAttributesType } from '../ts/model-types';
 
 const STICKER_CREATOR_PARTITION = 'sticker-creator';
 
@@ -1856,7 +1858,7 @@ app.on('ready', async () => {
   const importFromSignalBackupToolsCsvs = process.argv.some(
     arg => arg === '--import-from-signalbackuptools-csvs'
   );
-  const onlyCommandLine = showHelp || importFromSignalBackupToolsCsvs;
+  const onlyCommandLine = showHelp;
 
   if (!onlyCommandLine) {
     // Run window preloading in parallel with database initialization.
@@ -1902,26 +1904,6 @@ Send messages securely, even with a compromised server
     );
   }
 
-  if (onlyCommandLine) {
-    if (importFromSignalBackupToolsCsvs) {
-      try {
-        const databasePath = 'Android_Database/database.sqlite';
-        const androidDB = new Database(databasePath);
-        const query = androidDB.prepare(`select body, quote_id, quote_body, from_recipient_id, to_recipient_id, date_received, date_sent, link_previews, * from message where date_sent=1683655189509`);
-        const rows = query.all();
-        rows.forEach(e => {
-          console.log(e);
-          process.stdout.write('\n');
-        });
-        androidDB.close();
-      } catch (e) {
-        console.log(`Failed to open files: (${e.message}). Exiting...`);
-        app.exit(1);
-      }
-    }
-    app.exit(0);
-  }
-
   ready = true;
 
   setupMenu();
@@ -1940,6 +1922,41 @@ Send messages securely, even with a compromised server
     'sql/db.sqlite-wal',
     'sql/db.sqlite-shm',
   ]);
+
+  if (importFromSignalBackupToolsCsvs) {
+    function androidMessageToDesktopMessage(message: any): MessageAttributesType{
+      return {
+        id: message.id,
+        type: message.type,
+        received_at: message.date_received,
+        sent_at: message.date_sent,
+        conversationId: "2",
+        timestamp: message.date_received,
+        ...message
+      }
+    }
+    try {
+      const databasePath = 'Android_Database/database.sqlite';
+      const androidDB = new Database(databasePath);
+      const query = androidDB.prepare(
+        `select body, quote_id, quote_body, from_recipient_id, to_recipient_id, date_received, date_sent, link_previews, * from message where date_sent=1683655189509`
+      );
+      const rows = query.all();
+      rows.forEach(e => {
+        process.stdout.write(JSON.stringify(e));
+        process.stdout.write('\n');
+      });
+      console.log('Starting saveMessage');
+      sql.sqlCall('saveMessage', androidMessageToDesktopMessage(rows[0]), {
+        ourUuid: '00000000-0000-0000-0000-000000000000',
+      });
+      console.log('Ending saveMessage');
+      androidDB.close();
+    } catch (e) {
+      console.log(`Failed to open files: (${e.message}). Exiting...`);
+      app.exit(1);
+    }
+  }
 });
 
 function setupMenu(options?: Partial<CreateTemplateOptionsType>) {
